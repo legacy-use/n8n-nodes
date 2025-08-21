@@ -3,17 +3,18 @@
   "version": "0.1.0",
   "description": "",
   "keywords": [
-    "n8n-community-node-package"
+    "n8n-community-node-package",
+    "legacy-use"
   ],
   "license": "MIT",
-  "homepage": "",
+  "homepage": "https://legacy-use.com",
   "author": {
-    "name": "",
-    "email": ""
+    "name": "legacy-use",
+    "email": "automate@legacy-use.com"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/<...>/n8n-nodes-<...>.git"
+    "url": "https://github.com/legacy-use/n8n-nodes.git"
   },
   "engines": {
     "node": ">=20.15"
