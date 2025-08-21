@@ -42,6 +42,10 @@ export class LegacyUse implements INodeType {
 						name: 'Job',
 						value: 'job',
 					},
+					{
+						name: 'Generic API',
+						value: 'generic',
+					},
 				],
 				default: 'job',
 			},
@@ -60,7 +64,20 @@ export class LegacyUse implements INodeType {
 				],
 				default: 'run',
 			},
-			// Common fields
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				displayOptions: {
+					show: { resource: ['generic'] },
+				},
+				options: [
+					{ name: 'Request', value: 'request', description: 'Make a generic API call', action: 'Make a generic API call' },
+				],
+				default: 'request',
+			},
+			// Job fields
 			{
 				displayName: 'Target',
 				name: 'target_id',
@@ -133,6 +150,86 @@ export class LegacyUse implements INodeType {
 				required: true,
 				displayOptions: { show: { resource: ['job'], operation: ['wait'] } },
 			},
+			// Generic API fields
+			{
+				displayName: 'Method',
+				name: 'method',
+				type: 'options',
+				options: [
+					{ name: 'GET', value: 'GET' },
+					{ name: 'POST', value: 'POST' },
+					{ name: 'PUT', value: 'PUT' },
+					{ name: 'PATCH', value: 'PATCH' },
+					{ name: 'DELETE', value: 'DELETE' },
+				],
+				default: 'GET',
+				displayOptions: { show: { resource: ['generic'], operation: ['request'] } },
+			},
+			{
+				displayName: 'URL or Path',
+				name: 'url',
+				type: 'string',
+				default: '/',
+				description: 'Absolute URL or path relative to base',
+				displayOptions: { show: { resource: ['generic'], operation: ['request'] } },
+				required: true,
+			},
+			{
+				displayName: 'Response Format',
+				name: 'responseFormat',
+				type: 'options',
+				options: [
+					{ name: 'JSON', value: 'json' },
+					{ name: 'Text', value: 'text' },
+				],
+				default: 'json',
+				displayOptions: { show: { resource: ['generic'], operation: ['request'] } },
+			},
+			{
+				displayName: 'Query Parameters',
+				name: 'query',
+				type: 'fixedCollection',
+				typeOptions: { multipleValues: true },
+				default: {},
+				displayOptions: { show: { resource: ['generic'], operation: ['request'] } },
+				options: [
+					{
+						name: 'param',
+						displayName: 'Param',
+						values: [
+							{ displayName: 'Key', name: 'key', type: 'string', default: '' },
+							{ displayName: 'Value', name: 'value', type: 'string', default: '' },
+						],
+					},
+				],
+			},
+			{
+				displayName: 'Headers',
+				name: 'headers',
+				type: 'fixedCollection',
+				typeOptions: { multipleValues: true },
+				default: {},
+				displayOptions: { show: { resource: ['generic'], operation: ['request'] } },
+				options: [
+					{
+						name: 'header',
+						displayName: 'Header',
+						values: [
+							{ displayName: 'Key', name: 'key', type: 'string', default: '' },
+							{ displayName: 'Value', name: 'value', type: 'string', default: '' },
+						],
+					},
+				],
+			},
+			{
+				displayName: 'Body (JSON)',
+				name: 'bodyJson',
+				type: 'string',
+				default: '',
+				displayOptions: { show: { resource: ['generic'], operation: ['request'], method: ['POST', 'PUT', 'PATCH', 'DELETE'] } },
+				placeholder: '{"key":"value"}',
+				description: 'JSON string to send as request body',
+			},
 		],
 	};
 
@@ -186,81 +283,138 @@ export class LegacyUse implements INodeType {
 				const resource = this.getNodeParameter('resource', i) as string;
 				const operation = this.getNodeParameter('operation', i) as string;
 
-				if (resource !== 'job') {
-					throw new NodeOperationError(this.getNode(), 'Unsupported resource', { itemIndex: i });
-				}
-
 				const credentials = (await this.getCredentials('legacyUseApi')) as {
 					subdomain: string;
 					apiKey: string;
 				};
 				const baseUrl = `https://${credentials.subdomain}.legacy-use.com/api`;
 
-				if (operation === 'start' || operation === 'run') {
-					const targetId = this.getNodeParameter('target_id', i) as string;
-					const apiName = this.getNodeParameter('api_name', i) as string;
-
-					// Merge parameters
-					const kv = (this.getNodeParameter('parametersKv', i, {}) as any).pair as
-						| Array<{ key: string; value: string }>
-						| undefined;
-					const jsonStr = (this.getNodeParameter('parametersJson', i, '') as string) || '';
-					let params: Record<string, unknown> = {};
-					if (Array.isArray(kv)) {
-						for (const pair of kv) {
-							if (pair.key) params[pair.key] = pair.value;
-						}
-					}
-					if (jsonStr.trim()) {
-						try {
-							const parsed = JSON.parse(jsonStr);
-							if (parsed && typeof parsed === 'object') params = { ...params, ...parsed };
-						} catch (e) {
-							throw new NodeOperationError(this.getNode(), 'Invalid JSON in Parameters (JSON)', {
-								itemIndex: i,
-							});
-						}
+				if (resource === 'job') {
+					if (operation !== 'start' && operation !== 'run' && operation !== 'wait') {
+						throw new NodeOperationError(this.getNode(), 'Unsupported operation', { itemIndex: i });
 					}
 
-					const startResponse = (await this.helpers.requestWithAuthentication.call(this, 'legacyUseApi', {
-						method: 'POST',
-						url: `${baseUrl}/targets/${encodeURIComponent(targetId)}/jobs/`,
-						json: true,
-						body: {
-							api_name: apiName,
-							parameters: params,
-						},
-					})) as any;
+					if (operation === 'start' || operation === 'run') {
+						const targetId = this.getNodeParameter('target_id', i) as string;
+						const apiName = this.getNodeParameter('api_name', i) as string;
 
-					const jobId = startResponse?.id as string;
-					const status = (startResponse?.status || 'pending') as JobStatus;
+						// Merge parameters
+						const kv = (this.getNodeParameter('parametersKv', i, {}) as any).pair as
+							| Array<{ key: string; value: string }>
+							| undefined;
+						const jsonStr = (this.getNodeParameter('parametersJson', i, '') as string) || '';
+						let params: Record<string, unknown> = {};
+						if (Array.isArray(kv)) {
+							for (const pair of kv) {
+								if (pair.key) params[pair.key] = pair.value;
+							}
+						}
+						if (jsonStr.trim()) {
+							try {
+								const parsed = JSON.parse(jsonStr);
+								if (parsed && typeof parsed === 'object') params = { ...params, ...parsed };
+							} catch (e) {
+								throw new NodeOperationError(this.getNode(), 'Invalid JSON in Parameters (JSON)', {
+									itemIndex: i,
+								});
+							}
+						}
 
-					if (operation === 'start') {
-						returnData.push({ json: { job_id: jobId, status } });
+						const startResponse = (await this.helpers.requestWithAuthentication.call(this, 'legacyUseApi', {
+							method: 'POST',
+							url: `${baseUrl}/targets/${encodeURIComponent(targetId)}/jobs/`,
+							json: true,
+							body: {
+								api_name: apiName,
+								parameters: params,
+							},
+						})) as any;
+
+						const jobId = startResponse?.id as string;
+						const status = (startResponse?.status || 'pending') as JobStatus;
+
+						if (operation === 'start') {
+							returnData.push({ json: { job_id: jobId, status } });
+							continue;
+						}
+
+						// run: poll until terminal
+						const pollDelay = this.getNodeParameter('pollDelay', i, 2000) as number;
+						const pollLimit = this.getNodeParameter('pollLimit', i, 300) as number;
+
+						const result = await pollJob(this, baseUrl, targetId, jobId, pollDelay, pollLimit);
+						returnData.push({ json: (result as unknown) as IDataObject });
 						continue;
 					}
 
-					// run: poll until terminal
-					const pollDelay = this.getNodeParameter('pollDelay', i, 2000) as number;
-					const pollLimit = this.getNodeParameter('pollLimit', i, 300) as number;
+					if (operation === 'wait') {
+						const targetId = this.getNodeParameter('target_id', i) as string;
+						const jobId = this.getNodeParameter('job_id', i) as string;
+						const pollDelay = this.getNodeParameter('pollDelay', i, 2000) as number;
+						const pollLimit = this.getNodeParameter('pollLimit', i, 300) as number;
 
-					const result = await pollJob(this, baseUrl, targetId, jobId, pollDelay, pollLimit);
-					returnData.push({ json: (result as unknown) as IDataObject });
+						const result = await pollJob(this, baseUrl, targetId, jobId, pollDelay, pollLimit);
+						returnData.push({ json: (result as unknown) as IDataObject });
+						continue;
+					}
+				}
+
+				if (resource === 'generic') {
+					if (operation !== 'request') {
+						throw new NodeOperationError(this.getNode(), 'Unsupported operation', { itemIndex: i });
+					}
+					const method = this.getNodeParameter('method', i) as string;
+					const urlInput = this.getNodeParameter('url', i) as string;
+					const responseFormat = this.getNodeParameter('responseFormat', i, 'json') as string;
+					const queryPairs = (this.getNodeParameter('query', i, {}) as any).param as Array<{ key: string; value: string }> | undefined;
+					const headerPairs = (this.getNodeParameter('headers', i, {}) as any).header as Array<{ key: string; value: string }> | undefined;
+					const bodyJson = this.getNodeParameter('bodyJson', i, '') as string;
+
+					const finalUrl = /^https?:\/\//i.test(urlInput)
+						? urlInput
+						: `${baseUrl}${urlInput.startsWith('/') ? '' : '/'}${urlInput}`;
+
+					const qs: IDataObject = {};
+					if (Array.isArray(queryPairs)) {
+						for (const p of queryPairs) if (p.key) qs[p.key] = p.value;
+					}
+					const headers: IDataObject = {};
+					if (Array.isArray(headerPairs)) {
+						for (const h of headerPairs) if (h.key) headers[h.key] = h.value;
+					}
+
+					const options: IDataObject = {
+						method,
+						url: finalUrl,
+						qs,
+						headers,
+						resolveWithFullResponse: true,
+					};
+					if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+						if (bodyJson && bodyJson.trim()) {
+							try {
+								(options as any).json = true;
+								(options as any).body = JSON.parse(bodyJson);
+							} catch (e) {
+								throw new NodeOperationError(this.getNode(), 'Invalid JSON in Body (JSON)', { itemIndex: i });
+							}
+						}
+					}
+
+					const res = (await this.helpers.requestWithAuthentication.call(this, 'legacyUseApi', options)) as any;
+					let body: unknown = res.body;
+					if (responseFormat === 'json' && typeof body === 'string') {
+						try {
+							body = JSON.parse(body);
+						} catch {}
+					}
+					returnData.push({
+						json: ({ body, headers: res.headers, statusCode: res.statusCode } as unknown) as IDataObject,
+					});
 					continue;
 				}
 
-				if (operation === 'wait') {
-					const targetId = this.getNodeParameter('target_id', i) as string;
-					const jobId = this.getNodeParameter('job_id', i) as string;
-					const pollDelay = this.getNodeParameter('pollDelay', i, 2000) as number;
-					const pollLimit = this.getNodeParameter('pollLimit', i, 300) as number;
-
-					const result = await pollJob(this, baseUrl, targetId, jobId, pollDelay, pollLimit);
-					returnData.push({ json: (result as unknown) as IDataObject });
-					continue;
-				}
-
-				throw new NodeOperationError(this.getNode(), 'Unsupported operation', { itemIndex: i });
+				throw new NodeOperationError(this.getNode(), 'Unsupported resource', { itemIndex: i });
 			} catch (error) {
 				if (this.continueOnFail()) {
 					returnData.push({ json: { error: (error as Error).message }, pairedItem: i });
