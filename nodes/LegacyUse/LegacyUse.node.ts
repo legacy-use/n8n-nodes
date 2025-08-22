@@ -13,14 +13,14 @@ type JobStatus = 'pending' | 'queued' | 'running' | 'success' | 'failed';
 
 export class LegacyUse implements INodeType {
 	description: INodeTypeDescription = {
-		displayName: 'LegacyUse',
-		name: 'legacyUse',
+		displayName: 'legacy-use',
+		name: 'legacy-use',
         icon: { light: 'file:legacy_cursor_black.svg', dark: 'file:legacy_cursor_white.svg' },
 		group: ['transform'],
 		version: 1,
-		description: 'Interact with LegacyUse API',
+		description: 'Interact with legacy-use API',
 		defaults: {
-			name: 'LegacyUse',
+			name: 'legacy-use',
 		},
 		inputs: [NodeConnectionType.Main],
 		outputs: [NodeConnectionType.Main],
@@ -85,7 +85,7 @@ export class LegacyUse implements INodeType {
 				typeOptions: { loadOptionsMethod: 'getTargets' },
 				default: '',
 				required: true,
-				description: 'LegacyUse target',
+				description: 'legacy-use target',
 				displayOptions: { show: { resource: ['job'], operation: ['run', 'start', 'wait'] } },
 			},
 			{

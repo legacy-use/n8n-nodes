@@ -57,7 +57,7 @@ The node exposes two resources: `Job` for running legacy-use jobs and `Generic A
 
 ### Credentials
 
-Create credentials of type `LegacyUse API` and provide:
+Create credentials of type `legacy-use API` and provide:
 
 - **Subdomain** (`subdomain`): Your legacy-use subdomain (e.g., `acme` for `https://acme.legacy-use.com`).
 - **API Key** (`apiKey`): Personal or project API key from legacy-use.
@@ -74,7 +74,7 @@ Don't have an account yet? Sign up at [legacy-use Cloud](https://cloud.legacy-us
 
 ### Usage
 
-1. Add the `LegacyUse` node to your workflow.
+1. Add the `legacy-use` node to your workflow.
 2. Select a **Resource**:
    - For UI automations, choose **Job**.
    - For low-level HTTP access to the service, choose **Generic API**.
