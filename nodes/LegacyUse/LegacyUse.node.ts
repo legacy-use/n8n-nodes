@@ -116,7 +116,7 @@ export class LegacyUse implements INodeType {
 								type: 'options',
 								default: '',
 								typeOptions: { loadOptionsMethod: 'getApiParameters', loadOptionsDependsOn: ['api_name'] },
-								required: true,
+								required: false,
 							},
 							{
 								displayName: 'Value',
@@ -280,8 +280,8 @@ export class LegacyUse implements INodeType {
 
 				const options: INodePropertyOptions[] = (res?.parameters || []).map((r) => ({
 					name: r.name,
-					value: r.default || '',
-					description: r.description,
+					value: r.name,
+					description: r.description ? `${r.description}${r.default ? ` (default: ${r.default})` : ''}` : (r.default ? `Default: ${r.default}` : undefined),
 				}));
 				return options;
 			},
