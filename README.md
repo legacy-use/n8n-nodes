@@ -2,7 +2,7 @@
 
 This is an n8n community node. It lets you use legacy-use in your n8n workflows.
 
-legacy-use turns any desktop application—no API required—into a reliable, scriptable REST API. It lets code and AI agents drive legacy software through its existing UI (RDP, VNC, Citrix, TeamViewer, etc.) with guardrails, logging, and observability.
+legacy-use turns any desktop application - no API required - into a reliable, scriptable REST API. It lets code and AI agents drive legacy software through its existing UI (RDP, VNC, Citrix, TeamViewer, etc.) with guardrails, logging, and observability.
 
 [Installation](#installation)  
 [Operations](#operations)  
