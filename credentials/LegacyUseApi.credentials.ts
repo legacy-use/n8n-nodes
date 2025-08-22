@@ -7,8 +7,8 @@ import {
 
 export class LegacyUseApi implements ICredentialType {
 	name = 'legacyUseApi';
-	displayName = 'legacy-use';
-	// documentationUrl = 'https://legacy-use.com/docs';
+	displayName = 'Legacy Use API';
+	documentationUrl = 'https://legacy-use.com/docs';
 
 	properties: INodeProperties[] = [
 		{

@@ -13,14 +13,14 @@ type JobStatus = 'pending' | 'queued' | 'running' | 'success' | 'failed';
 
 export class LegacyUse implements INodeType {
 	description: INodeTypeDescription = {
-		displayName: 'legacy-use',
-		name: 'legacy-use',
+		displayName: 'Legacy Use',
+		name: 'legacyUse',
         icon: { light: 'file:legacy_cursor_black.svg', dark: 'file:legacy_cursor_white.svg' },
 		group: ['transform'],
 		version: 1,
-		description: 'Interact with legacy-use API',
+		description: 'Interact with the Legacy Use API',
 		defaults: {
-			name: 'legacy-use',
+			name: 'Legacy Use',
 		},
 		inputs: [NodeConnectionType.Main],
 		outputs: [NodeConnectionType.Main],
@@ -79,22 +79,22 @@ export class LegacyUse implements INodeType {
 			},
 			// Job fields
 			{
-				displayName: 'Target',
+				displayName: 'Target Name or ID',
 				name: 'target_id',
 				type: 'options',
 				typeOptions: { loadOptionsMethod: 'getTargets' },
 				default: '',
 				required: true,
-				description: 'legacy-use target',
+				description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
 				displayOptions: { show: { resource: ['job'], operation: ['run', 'start', 'wait'] } },
 			},
 			{
-				displayName: 'API',
+				displayName: 'API Name or ID',
 				name: 'api_name',
 				type: 'options',
 				default: '',
 				required: true,
-				description: 'API definition (from /api/definitions)',
+				description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
 				typeOptions: { loadOptionsMethod: 'getApis' },
 				displayOptions: { show: { resource: ['job'], operation: ['run', 'start', 'getParams'] } },
 			},
@@ -111,12 +111,12 @@ export class LegacyUse implements INodeType {
 						displayName: 'Parameter',
 						values: [
 							{
-								displayName: 'Name',
+								displayName: 'Name or ID',
 								name: 'key',
 								type: 'options',
 								default: '',
+								description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
 								typeOptions: { loadOptionsMethod: 'getApiParameters', loadOptionsDependsOn: ['api_name'] },
-								required: false,
 							},
 							{
 								displayName: 'Value',
@@ -138,7 +138,7 @@ export class LegacyUse implements INodeType {
 				displayOptions: { show: { resource: ['job'], operation: ['run', 'wait'] } },
 				options: [
 					{
-						displayName: 'Poll Delay (ms)',
+						displayName: 'Poll Delay (Ms)',
 						name: 'pollDelay',
 						type: 'number',
 						default: 2000,
@@ -167,11 +167,11 @@ export class LegacyUse implements INodeType {
 				name: 'method',
 				type: 'options',
 				options: [
+					{ name: 'DELETE', value: 'DELETE' },
 					{ name: 'GET', value: 'GET' },
+					{ name: 'PATCH', value: 'PATCH' },
 					{ name: 'POST', value: 'POST' },
 					{ name: 'PUT', value: 'PUT' },
-					{ name: 'PATCH', value: 'PATCH' },
-					{ name: 'DELETE', value: 'DELETE' },
 				],
 				default: 'GET',
 				displayOptions: { show: { resource: ['generic'], operation: ['request'] } },
@@ -182,6 +182,7 @@ export class LegacyUse implements INodeType {
 				type: 'string',
 				default: '/',
 				description: 'Absolute URL or path relative to base',
+				placeholder: 'e.g. /targets/',
 				displayOptions: { show: { resource: ['generic'], operation: ['request'] } },
 				required: true,
 			},
@@ -195,6 +196,14 @@ export class LegacyUse implements INodeType {
 				],
 				default: 'json',
 				displayOptions: { show: { resource: ['generic'], operation: ['request'] } },
+			},
+			{
+				displayName: 'Simplify',
+				name: 'simplify',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to return a simplified version of the response instead of the raw data',
+				displayOptions: { show: { resource: ['generic'], operation: ['request'], responseFormat: ['json'] } },
 			},
 			{
 				displayName: 'Query Parameters',
@@ -428,6 +437,7 @@ export class LegacyUse implements INodeType {
 					const queryPairs = (this.getNodeParameter('query', i, {}) as any).param as Array<{ key: string; value: string }> | undefined;
 					const headerPairs = (this.getNodeParameter('headers', i, {}) as any).header as Array<{ key: string; value: string }> | undefined;
 					const bodyJson = this.getNodeParameter('bodyJson', i, '') as string;
+					const simplify = this.getNodeParameter('simplify', i, false) as boolean;
 
 					const finalUrl = /^https?:\/\//i.test(urlInput)
 						? urlInput
@@ -455,7 +465,7 @@ export class LegacyUse implements INodeType {
 								(options as any).json = true;
 								(options as any).body = JSON.parse(bodyJson);
 							} catch (e) {
-								throw new NodeOperationError(this.getNode(), 'Invalid JSON in Body (JSON)', { itemIndex: i });
+								throw new NodeOperationError(this.getNode(), "Body (JSON) must be valid JSON. For example: {\"key\":\"value\"}", { itemIndex: i });
 							}
 						}
 					}
@@ -466,6 +476,17 @@ export class LegacyUse implements INodeType {
 						try {
 							body = JSON.parse(body);
 						} catch {}
+					}
+
+					if (responseFormat === 'json' && simplify && body && typeof body === 'object') {
+						const simplifyObject = (obj: any): any => {
+							if (Array.isArray(obj)) return obj.slice(0, 10).map(simplifyObject);
+							const entries = Object.entries(obj).slice(0, 10);
+							const simplified: Record<string, unknown> = {};
+							for (const [k, v] of entries) simplified[k] = typeof v === 'object' && v !== null ? simplifyObject(v) : v;
+							return simplified;
+						};
+						body = simplifyObject(body);
 					}
 					returnData.push({
 						json: ({ body, headers: res.headers, statusCode: res.statusCode } as unknown) as IDataObject,
