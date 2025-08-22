@@ -1,6 +1,6 @@
 {
   "name": "@legacy-use/n8n-nodes-legacy-use",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Automate any legacy application with AI",
   "keywords": [
     "n8n-community-node-package",
@@ -23,8 +23,8 @@
     "build": "npx rimraf dist && tsc && gulp build:icons",
     "dev": "tsc --watch",
     "format": "prettier nodes credentials --write",
-    "lint": "eslint nodes credentials package.json",
-    "lintfix": "eslint nodes credentials package.json --fix",
+    "lint": "eslint nodes/LegacyUse credentials/LegacyUseApi.credentials.ts package.json",
+    "lintfix": "eslint nodes/LegacyUse credentials/LegacyUseApi.credentials.ts package.json --fix",
     "prepublishOnly": "npm run build && npm run lint"
   },
   "files": [
@@ -36,13 +36,9 @@
   "n8n": {
     "n8nNodesApiVersion": 1,
     "credentials": [
-      "dist/credentials/ExampleCredentialsApi.credentials.js",
-      "dist/credentials/HttpBinApi.credentials.js",
       "dist/credentials/LegacyUseApi.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/ExampleNode/ExampleNode.node.js",
-      "dist/nodes/HttpBin/HttpBin.node.js",
       "dist/nodes/LegacyUse/LegacyUse.node.js"
     ]
   },

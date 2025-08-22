@@ -22,9 +22,9 @@
 		"outDir": "./dist/",
 	},
 	"include": [
-		"credentials/**/*",
-		"nodes/**/*",
-		"nodes/**/*.json",
+		"credentials/LegacyUseApi.credentials.ts",
+		"nodes/LegacyUse/**/*",
+		"nodes/LegacyUse/**/*.json",
 		"package.json",
 	],
 }
