@@ -1,6 +1,6 @@
 {
   "name": "@legacy-use/n8n-nodes-legacy-use",
-  "version": "0.1.4",
+  "version": "0.1.6",
   "description": "Automate any legacy application with AI",
   "keywords": [
     "n8n-community-node-package",
