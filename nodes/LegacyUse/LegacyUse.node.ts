@@ -96,10 +96,10 @@ export class LegacyUse implements INodeType {
 				required: true,
 				description: 'API definition (from /api/definitions)',
 				typeOptions: { loadOptionsMethod: 'getApis' },
-				displayOptions: { show: { resource: ['job'], operation: ['run', 'start'] } },
+				displayOptions: { show: { resource: ['job'], operation: ['run', 'start', 'getParams'] } },
 			},
 			{
-				displayName: 'Parameters (Key-Value)',
+				displayName: 'API Parameters',
 				name: 'parametersKv',
 				type: 'fixedCollection',
 				default: {},
@@ -107,25 +107,29 @@ export class LegacyUse implements INodeType {
 				typeOptions: { multipleValues: true },
 				options: [
 					{
-						name: 'pair',
-						displayName: 'Pair',
+						name: 'param',
+						displayName: 'Parameter',
 						values: [
-							{ displayName: 'Key', name: 'key', type: 'string', default: '', required: true },
-							{ displayName: 'Value', name: 'value', type: 'string', default: '' },
+							{
+								displayName: 'Name',
+								name: 'key',
+								type: 'options',
+								default: '',
+								typeOptions: { loadOptionsMethod: 'getApiParameters', loadOptionsDependsOn: ['api_name'] },
+								required: true,
+							},
+							{
+								displayName: 'Value',
+								name: 'value',
+								type: 'string',
+								default: '',
+							},
 						],
 					},
 				],
 			},
-			{
-				displayName: 'Parameters (JSON)',
-				name: 'parametersJson',
-				type: 'string',
-				default: '',
-				placeholder: '{"foo":"bar"}',
-				description: 'Optional JSON to merge with key-value parameters',
-				displayOptions: { show: { resource: ['job'], operation: ['run', 'start'] } },
-			},
 			// Polling options for run/wait
+            // TODO: show only on advanced mode
 			{
 				displayName: 'Poll Delay (ms)',
 				name: 'pollDelay',
@@ -253,6 +257,27 @@ export class LegacyUse implements INodeType {
 				}));
 				return options;
 			},
+			async getApiParameters(this: ILoadOptionsFunctions) {
+				const apiName = (this.getCurrentNodeParameter('api_name') as string) || '';
+				if (!apiName) return [];
+				const credentials = (await this.getCredentials('legacyUseApi')) as {
+					subdomain: string;
+					apiKey: string;
+				};
+				const baseUrl = `https://${credentials.subdomain}.legacy-use.com/api`;
+				const res = (await this.helpers.requestWithAuthentication.call(this, 'legacyUseApi', {
+					method: 'GET',
+					url: `${baseUrl}/api/definitions/${apiName}`,
+					json: true,
+				})) as { parameters: Array<{ name: string; description: string; default: string }> };
+
+				const options: INodePropertyOptions[] = (res?.parameters || []).map((r) => ({
+					name: r.name,
+					value: r.default || '',
+					description: r.description,
+				}));
+				return options;
+			},
 			async getTargets(this: ILoadOptionsFunctions) {
 				const credentials = (await this.getCredentials('legacyUseApi')) as {
 					subdomain: string;
@@ -299,25 +324,36 @@ export class LegacyUse implements INodeType {
 						const apiName = this.getNodeParameter('api_name', i) as string;
 
 						// Merge parameters
-						const kv = (this.getNodeParameter('parametersKv', i, {}) as any).pair as
+						const kv = (this.getNodeParameter('parametersKv', i, {}) as any).param as
 							| Array<{ key: string; value: string }>
 							| undefined;
-						const jsonStr = (this.getNodeParameter('parametersJson', i, '') as string) || '';
 						let params: Record<string, unknown> = {};
 						if (Array.isArray(kv)) {
 							for (const pair of kv) {
 								if (pair.key) params[pair.key] = pair.value;
 							}
 						}
-						if (jsonStr.trim()) {
-							try {
-								const parsed = JSON.parse(jsonStr);
-								if (parsed && typeof parsed === 'object') params = { ...params, ...parsed };
-							} catch (e) {
-								throw new NodeOperationError(this.getNode(), 'Invalid JSON in Parameters (JSON)', {
-									itemIndex: i,
-								});
+
+						// Enforce all API parameters are provided; apply defaults when present
+						const def = (await this.helpers.requestWithAuthentication.call(this, 'legacyUseApi', {
+							method: 'GET',
+							url: `${baseUrl}/api/definitions/${encodeURIComponent(apiName)}`,
+							json: true,
+						})) as { parameters?: Array<{ name: string; default?: unknown }> };
+						const expected = Array.isArray(def?.parameters) ? def.parameters : [];
+						const missing: string[] = [];
+						for (const p of expected) {
+							const has = Object.prototype.hasOwnProperty.call(params, p.name) && (params as any)[p.name] !== '' && (params as any)[p.name] !== undefined;
+							if (!has) {
+								if (p.default !== undefined) {
+									(params as any)[p.name] = p.default;
+								} else {
+									missing.push(p.name);
+								}
 							}
+						}
+						if (missing.length > 0) {
+							throw new NodeOperationError(this.getNode(), `Missing parameters: ${missing.join(', ')}`, { itemIndex: i });
 						}
 
 						const startResponse = (await this.helpers.requestWithAuthentication.call(this, 'legacyUseApi', {
@@ -355,6 +391,20 @@ export class LegacyUse implements INodeType {
 
 						const result = await pollJob(this, baseUrl, targetId, jobId, pollDelay, pollLimit);
 						returnData.push({ json: (result as unknown) as IDataObject });
+						continue;
+					}
+
+					if (operation === 'getParams') {
+						const apiName = this.getNodeParameter('api_name', i) as string;
+						const def = (await this.helpers.requestWithAuthentication.call(this, 'legacyUseApi', {
+							method: 'GET',
+							url: `${baseUrl}/api/definitions/${encodeURIComponent(apiName)}`,
+							json: true,
+						})) as { parameters?: Array<{ name: string; description?: string; default?: unknown }> };
+						const parameters = Array.isArray(def?.parameters) ? def.parameters : [];
+						const template: Record<string, unknown> = {};
+						for (const p of parameters) template[p.name] = p.default ?? '';
+						returnData.push({ json: ({ api_name: apiName, parameters, template } as unknown) as IDataObject });
 						continue;
 					}
 				}
