@@ -129,21 +129,28 @@ export class LegacyUse implements INodeType {
 				],
 			},
 			// Polling options for run/wait
-            // TODO: show only on advanced mode
 			{
-				displayName: 'Poll Delay (ms)',
-				name: 'pollDelay',
-				type: 'number',
-				default: 2000,
+				displayName: 'Advanced Options',
+				name: 'advancedOptions',
+				type: 'collection',
+				placeholder: 'Add Option',
+				default: {},
 				displayOptions: { show: { resource: ['job'], operation: ['run', 'wait'] } },
-			},
-			{
-				displayName: 'Poll Limit',
-				name: 'pollLimit',
-				type: 'number',
-				default: 300,
-				description: 'Number of polling attempts',
-				displayOptions: { show: { resource: ['job'], operation: ['run', 'wait'] } },
+				options: [
+					{
+						displayName: 'Poll Delay (ms)',
+						name: 'pollDelay',
+						type: 'number',
+						default: 2000,
+					},
+					{
+						displayName: 'Poll Limit',
+						name: 'pollLimit',
+						type: 'number',
+						default: 300,
+						description: 'Number of polling attempts',
+					},
+				],
 			},
 			// Wait-specific field
 			{
@@ -375,8 +382,9 @@ export class LegacyUse implements INodeType {
 						}
 
 						// run: poll until terminal
-						const pollDelay = this.getNodeParameter('pollDelay', i, 2000) as number;
-						const pollLimit = this.getNodeParameter('pollLimit', i, 300) as number;
+						const advRun = this.getNodeParameter('advancedOptions', i, {}) as IDataObject;
+						const pollDelay = (advRun.pollDelay as number) ?? 2000;
+						const pollLimit = (advRun.pollLimit as number) ?? 300;
 
 						const result = await pollJob(this, baseUrl, targetId, jobId, pollDelay, pollLimit);
 						returnData.push({ json: (result as unknown) as IDataObject });
@@ -386,8 +394,9 @@ export class LegacyUse implements INodeType {
 					if (operation === 'wait') {
 						const targetId = this.getNodeParameter('target_id', i) as string;
 						const jobId = this.getNodeParameter('job_id', i) as string;
-						const pollDelay = this.getNodeParameter('pollDelay', i, 2000) as number;
-						const pollLimit = this.getNodeParameter('pollLimit', i, 300) as number;
+						const advWait = this.getNodeParameter('advancedOptions', i, {}) as IDataObject;
+						const pollDelay = (advWait.pollDelay as number) ?? 2000;
+						const pollLimit = (advWait.pollLimit as number) ?? 300;
 
 						const result = await pollJob(this, baseUrl, targetId, jobId, pollDelay, pollLimit);
 						returnData.push({ json: (result as unknown) as IDataObject });
