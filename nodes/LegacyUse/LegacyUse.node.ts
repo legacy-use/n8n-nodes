@@ -15,7 +15,7 @@ export class LegacyUse implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'LegacyUse',
 		name: 'legacyUse',
-        icon: { light: 'file:legacy_cursor_white_large.png', dark: 'file:legacy_cursor_black_large.png' },
+        icon: { light: 'file:legacy_cursor_black.svg', dark: 'file:legacy_cursor_white.svg' },
 		group: ['transform'],
 		version: 1,
 		description: 'Interact with LegacyUse API',
