@@ -39,19 +39,15 @@ export class LegacyUse implements INodeType {
 				noDataExpression: true,
 				options: [
 					{
-						name: 'Main',
-						value: 'main',
-					},
-					{
-						name: 'Custom',
-						value: 'custom',
+						name: 'Job',
+						value: 'job',
 					},
 					{
 						name: 'Generic API',
 						value: 'generic',
 					},
 				],
-				default: 'main',
+				default: 'job',
 			},
 			{
 				displayName: 'Operation',
@@ -59,27 +55,15 @@ export class LegacyUse implements INodeType {
 				type: 'options',
 				noDataExpression: true,
 				displayOptions: {
-					show: { resource: ['main'] },
+					show: { resource: ['job'] },
 				},
 				options: [
 					{ name: 'Run', value: 'run', description: 'Start and wait for a job', action: 'Run a job' },
+					{ name: 'Start', value: 'start', description: 'Start a job without waiting', action: 'Start a job' },
+					{ name: 'Wait', value: 'wait', description: 'Wait for a job by ID', action: 'Wait for a job' },
 				],
 				default: 'run',
 			},
-            {
-                displayName: 'Operation',
-                name: 'operation',
-                type: 'options',
-                noDataExpression: true,
-                displayOptions: {
-                    show: { resource: ['custom'] },
-                },
-                options: [
-					{ name: 'Start', value: 'start', description: 'Start a job without waiting', action: 'Start a job' },
-					{ name: 'Wait', value: 'wait', description: 'Wait for a job by ID', action: 'Wait for a job' },
-                ],
-                default: 'start',
-            },
 			{
 				displayName: 'Operation',
 				name: 'operation',
