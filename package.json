@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-legacy-use",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Automate any legacy application with AI",
   "keywords": [
     "n8n-community-node-package",
@@ -19,7 +19,6 @@
   "engines": {
     "node": ">=20.15"
   },
-  
   "scripts": {
     "build": "npx rimraf dist && tsc && gulp build:icons",
     "dev": "tsc --watch",
