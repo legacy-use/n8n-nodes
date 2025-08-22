@@ -1,48 +1,122 @@
-![Banner image](https://user-images.githubusercontent.com/10284570/173569848-c624317f-42b1-45a6-ab09-f0ea3c247648.png)
+## n8n-nodes-legacy-use
 
-# n8n-nodes-starter
+This is an n8n community node. It lets you use legacy-use in your n8n workflows.
 
-This repo contains example nodes to help you get started building your own custom integrations for [n8n](https://n8n.io). It includes the node linter and other dependencies.
+legacy-use turns any desktop application—no API required—into a reliable, scriptable REST API. It lets code and AI agents drive legacy software through its existing UI (RDP, VNC, Citrix, TeamViewer, etc.) with guardrails, logging, and observability.
 
-To make your custom node available to the community, you must create it as an npm package, and [submit it to the npm registry](https://docs.npmjs.com/packages-and-modules/contributing-packages-to-the-registry).
+[Installation](#installation)  
+[Operations](#operations)  
+[Credentials](#credentials)  
+[Compatibility](#compatibility)  
+[Usage](#usage)  
+[Resources](#resources)  
+[Version history](#version-history)
 
-If you would like your node to be available on n8n cloud you can also [submit your node for verification](https://docs.n8n.io/integrations/creating-nodes/deploy/submit-community-nodes/).
+### Installation
 
-## Prerequisites
+Follow the [installation guide](https://docs.n8n.io/integrations/community-nodes/installation/) in the n8n community nodes documentation and install the package `n8n-nodes-legacy-use`.
 
-You need the following installed on your development machine:
+### Operations
 
-* [git](https://git-scm.com/downloads)
-* Node.js and npm. Minimum version Node 20. You can find instructions on how to install both using nvm (Node Version Manager) for Linux, Mac, and WSL [here](https://github.com/nvm-sh/nvm). For Windows users, refer to Microsoft's guide to [Install NodeJS on Windows](https://docs.microsoft.com/en-us/windows/dev-environment/javascript/nodejs-on-windows).
-* Install n8n with:
-  ```
-  npm install n8n -g
-  ```
-* Recommended: follow n8n's guide to [set up your development environment](https://docs.n8n.io/integrations/creating-nodes/build/node-development-environment/).
+The node exposes two resources: `Job` for running legacy-use jobs and `Generic API` for making authenticated requests to the legacy-use API.
 
-## Using this starter
+- **Job**
+  - **Run**: Start a job and wait until it finishes (success/failed).
+  - **Start**: Start a job without waiting (returns a `job_id`).
+  - **Wait**: Wait for an existing job by `job_id`.
 
-These are the basic steps for working with the starter. For detailed guidance on creating and publishing nodes, refer to the [documentation](https://docs.n8n.io/integrations/creating-nodes/).
+  Job fields:
+  - **Target** (`target_id`): Select a target machine/environment (loaded from `/targets/`).
+  - **API** (`api_name`): Select an API definition (loaded from `/api/definitions`).
+  - **API Parameters** (`parametersKv`): Key-value parameters for the selected API. Keys are dynamically loaded from the API definition. Missing parameters with defaults are auto-filled; others are required.
+  - **Advanced Options**: Polling controls for Run/Wait
+    - **Poll Delay (ms)** (`pollDelay`, default `2000`)
+    - **Poll Limit** (`pollLimit`, default `300` attempts)
+  - **Job ID** (`job_id`): Required for the Wait operation.
 
-1. [Generate a new repository](https://github.com/n8n-io/n8n-nodes-starter/generate) from this template repository.
-2. Clone your new repo:
-   ```
-   git clone https://github.com/<your organization>/<your-repo-name>.git
-   ```
-3. Run `npm i` to install dependencies.
-4. Open the project in your editor.
-5. Browse the examples in `/nodes` and `/credentials`. Modify the examples, or replace them with your own nodes.
-6. Update the `package.json` to match your details.
-7. Run `npm run lint` to check for errors or `npm run lintfix` to automatically fix errors when possible.
-8. Test your node locally. Refer to [Run your node locally](https://docs.n8n.io/integrations/creating-nodes/test/run-node-locally/) for guidance.
-9. Replace this README with documentation for your node. Use the [README_TEMPLATE](README_TEMPLATE.md) to get started.
-10. Update the LICENSE file to use your details.
-11. [Publish](https://docs.npmjs.com/packages-and-modules/contributing-packages-to-the-registry) your package to npm.
+  Job responses include:
+  - `job_id`: The job identifier
+  - `status`: One of `pending`, `queued`, `running`, `success`, `failed`
+  - `result` or `error` depending on the terminal status
 
-## More information
+- **Generic API**
+  - **Request**: Make an authenticated request against the legacy-use API or any absolute URL.
 
-Refer to our [documentation on creating nodes](https://docs.n8n.io/integrations/creating-nodes/) for detailed information on building your own nodes.
+  Request fields:
+  - **Method**: `GET`, `POST`, `PUT`, `PATCH`, `DELETE`
+  - **URL or Path**: Absolute URL or path relative to the base (`https://{subdomain}.legacy-use.com/api`).
+  - **Response Format**: `JSON` (default) or `Text`
+  - **Query Parameters**: Repeated key/value pairs
+  - **Headers**: Repeated key/value pairs
+  - **Body (JSON)**: For methods with a body; must be valid JSON
 
-## License
+  Request responses include:
+  - `body`: Parsed JSON when `Response Format` is `JSON` and the server returns JSON; otherwise text
+  - `headers`: Response headers
+  - `statusCode`: HTTP status code
 
-[MIT](https://github.com/n8n-io/n8n-nodes-starter/blob/master/LICENSE.md)
+### Credentials
+
+Create credentials of type `LegacyUse API` and provide:
+
+- **Subdomain** (`subdomain`): Your legacy-use subdomain (e.g., `acme` for `https://acme.legacy-use.com`).
+- **API Key** (`apiKey`): Personal or project API key from legacy-use.
+
+The node uses these credentials to authenticate all operations via `https://{subdomain}.legacy-use.com/api`.
+
+Don't have an account yet? Sign up at [legacy-use Cloud](https://cloud.legacy-use.com) to get a free API key.
+
+### Compatibility
+
+- n8n Nodes API: v1
+- Developed and tested against recent n8n versions supporting community nodes.
+- Runtime: Node.js ≥ 20.15 (see `engines` in `package.json`).
+
+### Usage
+
+1. Add the `LegacyUse` node to your workflow.
+2. Select a **Resource**:
+   - For UI automations, choose **Job**.
+   - For low-level HTTP access to the service, choose **Generic API**.
+3. For **Job**:
+   - Choose a **Target** and an **API**. The node will fetch the API definition and expose its parameters.
+   - Fill **API Parameters**. Any parameters with defaults will be auto-filled; required parameters without defaults must be provided.
+   - Choose **Run** to wait for completion, **Start** to fire-and-forget, or **Wait** to wait on a known `job_id`.
+   - Adjust **Advanced Options** (poll delay/limit) if needed.
+4. For **Generic API**:
+   - Choose a method and provide a path (e.g., `/targets/`) or an absolute URL.
+   - Optionally add query params, headers, and a JSON body.
+
+Example outputs
+
+```json
+// Job → Run (success)
+{
+  "job_id": "12345",
+  "status": "success",
+  "result": { "message": "Completed" }
+}
+```
+
+```json
+// Generic API → GET /targets/
+{
+  "statusCode": 200,
+  "headers": { "content-type": "application/json" },
+  "body": [
+    { "id": 1, "name": "VM-01" },
+    { "id": 2, "name": "VM-02" }
+  ]
+}
+```
+
+### Resources
+
+- [n8n community nodes documentation](https://docs.n8n.io/integrations/#community-nodes)
+- [legacy-use website](https://legacy-use.com)
+- [Sign up for legacy-use (free API key)](https://cloud.legacy-use.com)
+
+### Version history
+
+- `0.1.0`: Initial release with Job (Run/Start/Wait) and Generic API (Request).
+
