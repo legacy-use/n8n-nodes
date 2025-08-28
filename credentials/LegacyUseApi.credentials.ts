@@ -36,6 +36,7 @@ export class LegacyUseApi implements ICredentialType {
 		properties: {
 			headers: {
 				'X-API-Key': '={{$credentials.apiKey}}',
+				"X-Distinct-Id": "n8n"
 			},
 		},
 	};
