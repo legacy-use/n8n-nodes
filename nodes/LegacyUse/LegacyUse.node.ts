@@ -386,7 +386,7 @@ export class LegacyUse implements INodeType {
 						const status = (startResponse?.status || 'pending') as JobStatus;
 
 						if (operation === 'start') {
-							returnData.push({ json: { job_id: jobId, status } });
+							returnData.push({ json: { job_id: jobId, status }, pairedItem: { item: i } });
 							continue;
 						}
 
@@ -396,7 +396,7 @@ export class LegacyUse implements INodeType {
 						const pollLimit = (advRun.pollLimit as number) ?? 300;
 
 						const result = await pollJob(this, baseUrl, targetId, jobId, pollDelay, pollLimit);
-						returnData.push({ json: (result as unknown) as IDataObject });
+						returnData.push({ json: (result as unknown) as IDataObject, pairedItem: { item: i } });
 						continue;
 					}
 
@@ -408,7 +408,7 @@ export class LegacyUse implements INodeType {
 						const pollLimit = (advWait.pollLimit as number) ?? 300;
 
 						const result = await pollJob(this, baseUrl, targetId, jobId, pollDelay, pollLimit);
-						returnData.push({ json: (result as unknown) as IDataObject });
+						returnData.push({ json: (result as unknown) as IDataObject, pairedItem: { item: i } });
 						continue;
 					}
 
@@ -422,7 +422,7 @@ export class LegacyUse implements INodeType {
 						const parameters = Array.isArray(def?.parameters) ? def.parameters : [];
 						const template: Record<string, unknown> = {};
 						for (const p of parameters) template[p.name] = p.default ?? '';
-						returnData.push({ json: ({ api_name: apiName, parameters, template } as unknown) as IDataObject });
+						returnData.push({ json: ({ api_name: apiName, parameters, template } as unknown) as IDataObject, pairedItem: { item: i } });
 						continue;
 					}
 				}
@@ -490,6 +490,7 @@ export class LegacyUse implements INodeType {
 					}
 					returnData.push({
 						json: ({ body, headers: res.headers, statusCode: res.statusCode } as unknown) as IDataObject,
+						pairedItem: { item: i },
 					});
 					continue;
 				}
@@ -540,5 +541,4 @@ async function pollJob(
 
 	return { job_id: jobId, status: 'failed', error: 'Polling limit reached' };
 }
-
 
